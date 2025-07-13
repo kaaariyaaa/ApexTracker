@@ -3,6 +3,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { getPredatorData } from './services/apexApiService';
 import { PredatorData } from './types/apexApi';
+import { updatePredatorData } from './services/predatorCache';
 
 dotenv.config();
 
@@ -29,6 +30,8 @@ async function readHistory(): Promise<HistoryEntry[]> {
 async function logPredatorBorder(): Promise<void> {
   try {
     const dataToLog = await getPredatorData();
+    updatePredatorData(dataToLog); // <--- データをキャッシュに保存
+
     let history = await readHistory();
 
     const fortyEightHoursAgo = Date.now() - 48 * 60 * 60 * 1000;

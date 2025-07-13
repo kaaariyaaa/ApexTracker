@@ -50,7 +50,7 @@ function getDifferenceString(current: number, previous: number | undefined): str
     return '(24時間前データなし)';
   }
   const diff = current - previous;
-  return diff >= 0 ? `(+${diff})` : `(${diff})`;
+  return diff >= 0 ? `(+${diff})` : `(-${diff})`;
 }
 
 function createPredatorEmbed(newData: PredatorData, oldData: PredatorData | null): EmbedBuilder {
