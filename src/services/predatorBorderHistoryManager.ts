@@ -4,11 +4,19 @@ import * as path from 'path';
 
 export class PredatorBorderHistoryManager {
   private db: Database.Database;
+  private static instance: PredatorBorderHistoryManager;
   private static readonly DB_FILE_PATH = path.join(__dirname, '../../predator-border-history.db');
 
-  constructor() {
+  public constructor() {
     this.db = new Database(PredatorBorderHistoryManager.DB_FILE_PATH);
     this.initDatabase();
+  }
+
+  public static getInstance(): PredatorBorderHistoryManager {
+    if (!PredatorBorderHistoryManager.instance) {
+      PredatorBorderHistoryManager.instance = new PredatorBorderHistoryManager();
+    }
+    return PredatorBorderHistoryManager.instance;
   }
 
   private initDatabase(): void {
@@ -20,7 +28,6 @@ export class PredatorBorderHistoryManager {
         x1 INTEGER
       )
     `);
-    console.log('Predator border history database initialized.');
   }
 
   /**
@@ -32,7 +39,6 @@ export class PredatorBorderHistoryManager {
   public addRecord(pc: number, ps4: number, x1: number): void {
     const stmt = this.db.prepare('INSERT INTO predator_border_history (timestamp, pc, ps4, x1) VALUES (?, ?, ?, ?)');
     stmt.run(Date.now(), pc, ps4, x1);
-    console.log('Predator border history record added.');
   }
 
   /**
@@ -84,6 +90,5 @@ export class PredatorBorderHistoryManager {
    */
   public close(): void {
     this.db.close();
-    console.log('Predator border history database closed.');
   }
 }

@@ -1,13 +1,17 @@
-import { SlashCommandBuilder, CommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { LiveUpdateManager } from '../services/liveUpdateManager';
 
-const liveUpdateManager = new LiveUpdateManager();
+const liveUpdateManager = LiveUpdateManager.getInstance();
 
 export const data = new SlashCommandBuilder()
   .setName('stop-predator-border-live')
-  .setDescription('Stops the live update of the Predator border in the current channel.');
+  .setDescription('Stops the live update of the Predator border in the current channel.')
+  .addStringOption(option =>
+    option.setName('message_id')
+      .setDescription('The ID of the specific message to stop updating.')
+      .setRequired(false));
 
-export async function execute(interaction: CommandInteraction) {
+export async function execute(interaction: ChatInputCommandInteraction) {
   if (!interaction.channelId) {
     await interaction.reply({ content: 'This command can only be used in a channel.', ephemeral: true });
     return;
@@ -15,17 +19,30 @@ export async function execute(interaction: CommandInteraction) {
 
   await interaction.deferReply({ ephemeral: true });
 
-  const liveUpdates = liveUpdateManager.getLiveUpdatesByGuild(interaction.guildId!);
-  const updatesInChannel = liveUpdates.filter(update => update.channelId === interaction.channelId);
+  const messageIdToStop = interaction.options.getString('message_id');
 
-  if (updatesInChannel.length === 0) {
-    await interaction.editReply({ content: 'No live Predator border updates are running in this channel.' });
-    return;
+  if (messageIdToStop) {
+    // Stop a specific message
+    const liveUpdate = liveUpdateManager.getLiveUpdate(messageIdToStop);
+    if (liveUpdate && liveUpdate.channelId === interaction.channelId) {
+      liveUpdateManager.removeLiveUpdate(messageIdToStop);
+      await interaction.editReply({ content: `Live update for message ID ${messageIdToStop} has been stopped.` });
+    } else {
+      await interaction.editReply({ content: `No live update found for message ID ${messageIdToStop} in this channel.` });
+    }
+  } else {
+    // Stop all messages in the current channel
+    const liveUpdates = liveUpdateManager.getLiveUpdatesByChannel(interaction.channelId);
+
+    if (liveUpdates.length === 0) {
+      await interaction.editReply({ content: 'No live Predator border updates are running in this channel.' });
+      return;
+    }
+
+    for (const update of liveUpdates) {
+      liveUpdateManager.removeLiveUpdate(update.messageId);
+    }
+
+    await interaction.editReply({ content: 'All live Predator border updates in this channel have been stopped.' });
   }
-
-  for (const update of updatesInChannel) {
-    liveUpdateManager.removeLiveUpdate(update.messageId);
-  }
-
-  await interaction.editReply({ content: 'Live Predator border updates have been stopped in this channel.' });
 }

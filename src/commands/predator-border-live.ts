@@ -3,8 +3,8 @@ import { PredatorBorderHistoryManager } from '../services/predatorBorderHistoryM
 import { LiveUpdateManager } from '../services/liveUpdateManager';
 import { PredatorBorderRecord } from '../types/predatorBorderHistory';
 
-const predatorBorderHistoryManager = new PredatorBorderHistoryManager();
-const liveUpdateManager = new LiveUpdateManager();
+const predatorBorderHistoryManager = PredatorBorderHistoryManager.getInstance();
+const liveUpdateManager = LiveUpdateManager.getInstance();
 
 export const data = new SlashCommandBuilder()
   .setName('predator-border-live')

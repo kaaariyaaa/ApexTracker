@@ -8,8 +8,8 @@ import { createPredatorEmbed } from './commands/predator-border-live';
 
 dotenv.config();
 
-const predatorBorderHistoryManager = new PredatorBorderHistoryManager();
-const liveUpdateManager = new LiveUpdateManager();
+const predatorBorderHistoryManager = PredatorBorderHistoryManager.getInstance();
+const liveUpdateManager = LiveUpdateManager.getInstance();
 
 async function startPredatorBorderLogger() {
   try {

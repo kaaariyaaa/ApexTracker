@@ -9,11 +9,19 @@ export interface LiveUpdate {
 
 export class LiveUpdateManager {
   private db: Database.Database;
+  private static instance: LiveUpdateManager;
   private static readonly DB_FILE_PATH = path.join(__dirname, '../../live-updates.db');
 
-  constructor() {
+  private constructor() {
     this.db = new Database(LiveUpdateManager.DB_FILE_PATH);
     this.initDatabase();
+  }
+
+  public static getInstance(): LiveUpdateManager {
+    if (!LiveUpdateManager.instance) {
+      LiveUpdateManager.instance = new LiveUpdateManager();
+    }
+    return LiveUpdateManager.instance;
   }
 
   private initDatabase(): void {
@@ -24,7 +32,6 @@ export class LiveUpdateManager {
         guild_id TEXT NOT NULL
       )
     `);
-    console.log('Live update database initialized.');
   }
 
   public addLiveUpdate(messageId: string, channelId: string, guildId: string): void {
@@ -42,6 +49,16 @@ export class LiveUpdateManager {
     return updates;
   }
 
+  public getLiveUpdate(messageId: string): LiveUpdate | null {
+    const update = this.db.prepare('SELECT message_id AS messageId, channel_id AS channelId, guild_id AS guildId FROM live_updates WHERE message_id = ?').get(messageId) as LiveUpdate | undefined;
+    return update || null;
+  }
+
+  public getLiveUpdatesByChannel(channelId: string): LiveUpdate[] {
+    const updates = this.db.prepare('SELECT message_id AS messageId, channel_id AS channelId, guild_id AS guildId FROM live_updates WHERE channel_id = ?').all(channelId) as LiveUpdate[];
+    return updates;
+  }
+
   public getAllLiveUpdates(): LiveUpdate[] {
     const updates = this.db.prepare('SELECT message_id AS messageId, channel_id AS channelId, guild_id AS guildId FROM live_updates').all() as LiveUpdate[];
     return updates;
@@ -49,6 +66,5 @@ export class LiveUpdateManager {
 
   public close(): void {
     this.db.close();
-    console.log('Live update database closed.');
   }
 }
