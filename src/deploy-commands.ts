@@ -13,10 +13,18 @@ if (!token || !clientId) {
 
 const commands = loadCommands().map(cmd => cmd.data.toJSON());
 
+
 const rest = new REST({ version: '10' }).setToken(token);
 
 (async () => {
   try {
+    console.log('Attempting to delete all global application (/) commands.');
+    await rest.put(
+      Routes.applicationCommands(clientId),
+      { body: [] }, // Empty array to delete all commands
+    );
+    console.log('Successfully deleted all global application (/) commands.');
+
     console.log(`Started refreshing ${commands.length} application (/) commands.`);
 
     const data = await rest.put(

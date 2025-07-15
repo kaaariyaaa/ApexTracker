@@ -4,7 +4,7 @@ import { loadCommands, Command } from './utils/commandLoader';
 import { PredatorBorderHistoryManager } from './services/predatorBorderHistoryManager';
 import { LiveUpdateManager } from './services/liveUpdateManager';
 import { getPredatorData } from './services/apexApiService';
-import { createPredatorEmbed } from './commands/predator-border-live';
+import { createPredatorEmbed } from './commands/predator-live';
 
 dotenv.config();
 

@@ -4,7 +4,7 @@ import { LiveUpdateManager } from '../services/liveUpdateManager';
 const liveUpdateManager = LiveUpdateManager.getInstance();
 
 export const data = new SlashCommandBuilder()
-  .setName('stop-predator-border-live')
+  .setName('stop-predator-live')
   .setDescription('Stops the live update of the Predator border in the current channel.')
   .addStringOption(option =>
     option.setName('message_id')

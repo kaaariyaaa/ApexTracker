@@ -7,7 +7,7 @@ const predatorBorderHistoryManager = PredatorBorderHistoryManager.getInstance();
 const liveUpdateManager = LiveUpdateManager.getInstance();
 
 export const data = new SlashCommandBuilder()
-  .setName('predator-border-live')
+  .setName('predator-live')
   .setDescription('Displays the current Apex Legends Predator border. (Updates every minute)');
 
 function getDifferenceString(current: number | undefined, previous: number | undefined): string {
