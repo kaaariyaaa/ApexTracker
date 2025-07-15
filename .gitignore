@@ -1,4 +1,5 @@
 node_modules
 .env
 dist
-predator-history.json
+predator-border-history.db
+GEMINI.md

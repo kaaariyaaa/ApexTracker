@@ -1,59 +1,25 @@
 import { CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import fs from 'fs/promises';
-import path from 'path';
 import { getPredatorData } from '../services/apexApiService';
+import { PredatorBorderHistoryManager } from '../services/predatorBorderHistoryManager';
 import { PredatorData } from '../types/apexApi';
+import { PredatorBorderRecord } from '../types/predatorBorderHistory';
 
-const historyFilePath = path.join(__dirname, '../../predator-history.json');
-
-interface HistoryEntry {
-  timestamp: string;
-  data: PredatorData;
-}
+const predatorBorderHistoryManager = new PredatorBorderHistoryManager();
 
 export const data = new SlashCommandBuilder()
   .setName('predator')
-  .setDescription('現在のApex Legendsのプレデターボーダーと24時間前の差分を表示します。');
-
-async function get24HourOldData(): Promise<PredatorData | null> {
-  try {
-    const fileContent = await fs.readFile(historyFilePath, 'utf-8');
-    const history: HistoryEntry[] = JSON.parse(fileContent);
-
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-    let closestEntry: HistoryEntry | null = null;
-    let minDiffMs = Infinity;
-
-    for (const entry of history) {
-      const entryTime = new Date(entry.timestamp);
-      const diffMs = Math.abs(twentyFourHoursAgo.getTime() - entryTime.getTime());
-
-      if (diffMs < minDiffMs) {
-        minDiffMs = diffMs;
-        closestEntry = entry;
-      }
-    }
-    return closestEntry ? closestEntry.data : null;
-
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
-      return null;
-    }
-    console.error('Error reading predator history file for 24-hour data:', error);
-    return null;
-  }
-}
+  .setDescription('Displays the current Apex Legends Predator border and the difference from 24 hours ago.');
 
 function getDifferenceString(current: number, previous: number | undefined): string {
   if (previous === undefined) {
-    return '(24時間前データなし)';
+    return '(No data from 24 hours ago)';
   }
   const diff = current - previous;
-  return diff >= 0 ? `(+${diff})` : `(-${diff})`;
+  const sign = diff >= 0 ? '+' : '';
+  return `(${sign}${diff})`;
 }
 
-function createPredatorEmbed(newData: PredatorData, oldData: PredatorData | null): EmbedBuilder {
+function createPredatorEmbed(newData: PredatorData, oldRecord: PredatorBorderRecord | null): EmbedBuilder {
   return new EmbedBuilder()
     .setTitle('Apex Legends Predator Borders')
     .setColor(0xff0000)
@@ -61,21 +27,21 @@ function createPredatorEmbed(newData: PredatorData, oldData: PredatorData | null
     .addFields(
       {
         name: 'PC <:Origin:1393573470545121280>',
-        value: `RP: ${newData.PC.val} ${getDifferenceString(newData.PC.val, oldData?.PC.val)}`,
+        value: `RP: ${newData.PC.val} ${getDifferenceString(newData.PC.val, oldRecord?.pc)}`,
         inline: false,
       },
       {
         name: 'PlayStation <:PlayStation:1393573335526281236>',
-        value: `RP: ${newData.PS4.val} ${getDifferenceString(newData.PS4.val, oldData?.PS4.val)}`,
+        value: `RP: ${newData.PS4.val} ${getDifferenceString(newData.PS4.val, oldRecord?.ps4)}`,
         inline: false,
       },
       {
         name: 'Xbox <:Xbox:1393573305143005194>',
-        value: `RP: ${newData.X1.val} ${getDifferenceString(newData.X1.val, oldData?.X1.val)}`,
+        value: `RP: ${newData.X1.val} ${getDifferenceString(newData.X1.val, oldRecord?.x1)}`,
         inline: false,
       }
     )
-    .setFooter({ text: '差分は24時間前のデータとの比較です。' });
+    .setFooter({ text: 'The difference is a comparison with the data from 24 hours ago.' });
 }
 
 export async function execute(interaction: CommandInteraction) {
@@ -83,14 +49,15 @@ export async function execute(interaction: CommandInteraction) {
 
   try {
     const newData = await getPredatorData();
-    const oldData = await get24HourOldData();
-    const embed = createPredatorEmbed(newData, oldData);
+    const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
+    const oldRecord = predatorBorderHistoryManager.getRecordAroundTimestamp(twentyFourHoursAgo);
+    const embed = createPredatorEmbed(newData, oldRecord);
 
     await interaction.editReply({ embeds: [embed] });
 
   } catch (error) {
     console.error(error);
-    const errorMessage = error instanceof Error ? error.message : 'プレデターボーダーの取得に失敗しました。';
+    const errorMessage = error instanceof Error ? error.message : 'Failed to retrieve Predator border.';
     await interaction.editReply(errorMessage);
   }
 }

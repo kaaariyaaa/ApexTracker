@@ -4,14 +4,14 @@ import { PlayerData, PredatorData } from '../types/apexApi';
 
 export const data = new SlashCommandBuilder()
   .setName('stats')
-  .setDescription('指定したプレイヤーのApex Legends統計情報を表示します。')
+  .setDescription('Displays Apex Legends statistics for a specified player.')
   .addStringOption(option =>
     option.setName('player')
-      .setDescription('プレイヤー名')
+      .setDescription('Player name')
       .setRequired(true))
   .addStringOption(option =>
     option.setName('platform')
-      .setDescription('プラットフォーム (PC, PS4, X1)')
+      .setDescription('Platform (PC, PS4, X1)')
       .setRequired(true)
       .addChoices(
         { name: 'PC', value: 'PC' },
@@ -67,7 +67,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const playerData = await getPlayerData(playerName, platform);
 
     if (playerData.Error) {
-      await interaction.editReply(`エラー: ${playerData.Error}`);
+      await interaction.editReply(`Error: ${playerData.Error}`);
       return;
     }
 
@@ -78,8 +78,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   } catch (error) {
     console.error(error);
-    const errorMessage = error instanceof Error ? error.message : 'プレイヤー情報の取得に失敗しました。';
+    const errorMessage = error instanceof Error ? error.message : 'Failed to retrieve player information.';
     await interaction.editReply(errorMessage);
   }
 }
+
 
