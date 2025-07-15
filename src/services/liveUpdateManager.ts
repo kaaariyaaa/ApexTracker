@@ -30,24 +30,20 @@ export class LiveUpdateManager {
   public addLiveUpdate(messageId: string, channelId: string, guildId: string): void {
     const stmt = this.db.prepare('INSERT OR REPLACE INTO live_updates (message_id, channel_id, guild_id) VALUES (?, ?, ?)');
     stmt.run(messageId, channelId, guildId);
-    console.log(`Added/Updated live update: messageId=${messageId}, channelId=${channelId}, guildId=${guildId}`);
   }
 
   public removeLiveUpdate(messageId: string): void {
     const stmt = this.db.prepare('DELETE FROM live_updates WHERE message_id = ?');
     stmt.run(messageId);
-    console.log(`Removed live update: messageId=${messageId}`);
   }
 
   public getLiveUpdatesByGuild(guildId: string): LiveUpdate[] {
     const updates = this.db.prepare('SELECT message_id AS messageId, channel_id AS channelId, guild_id AS guildId FROM live_updates WHERE guild_id = ?').all(guildId) as LiveUpdate[];
-    console.log(`Retrieved live updates for guild ${guildId}:`, updates);
     return updates;
   }
 
   public getAllLiveUpdates(): LiveUpdate[] {
     const updates = this.db.prepare('SELECT message_id AS messageId, channel_id AS channelId, guild_id AS guildId FROM live_updates').all() as LiveUpdate[];
-    console.log('Retrieved all live updates:', updates);
     return updates;
   }
 

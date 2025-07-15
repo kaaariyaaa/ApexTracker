@@ -15,7 +15,6 @@ async function startPredatorBorderLogger() {
   try {
     const predatorData = await getPredatorData();
     predatorBorderHistoryManager.addRecord(predatorData.PC.val, predatorData.PS4.val, predatorData.X1.val);
-    console.log(`Predator border recorded: PC=${predatorData.PC.val}, PS4=${predatorData.PS4.val}, Xbox=${predatorData.X1.val}`);
   } catch (error) {
     console.error('Failed to fetch and record predator border data:', error);
   }
@@ -27,7 +26,7 @@ async function startLiveUpdateLoop(client: Client) {
   try {
     const allLiveUpdates = liveUpdateManager.getAllLiveUpdates();
     if (allLiveUpdates.length === 0) {
-      console.log('No active live updates to process.');
+      // No active live updates to process.
     } else {
       const latestRecord = predatorBorderHistoryManager.getLatestRecord();
       const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
@@ -36,7 +35,6 @@ async function startLiveUpdateLoop(client: Client) {
 
       for (const update of allLiveUpdates) {
         if (!update.channelId || !update.messageId) {
-          console.warn(`Invalid live update entry found: channelId=${update.channelId}, messageId=${update.messageId}. Removing from database.`);
           liveUpdateManager.removeLiveUpdate(update.messageId);
           continue;
         }
@@ -45,9 +43,7 @@ async function startLiveUpdateLoop(client: Client) {
           if (channel && channel.isTextBased()) {
             const message = await (channel as TextChannel).messages.fetch(update.messageId);
             await message.edit({ embeds: [embed] });
-            console.log(`Updated live message ${update.messageId} in channel ${update.channelId}`);
           } else {
-            console.warn(`Channel ${update.channelId} not found or not a text channel. Removing live update.`);
             liveUpdateManager.removeLiveUpdate(update.messageId);
           }
         } catch (error) {
@@ -55,7 +51,6 @@ async function startLiveUpdateLoop(client: Client) {
           // If message or channel is not found, remove it from live updates
           if (error instanceof Error && (error.message.includes('Unknown Message') || error.message.includes('Unknown Channel'))) {
             liveUpdateManager.removeLiveUpdate(update.messageId);
-            console.log(`Removed invalid live update for message ${update.messageId}.`);
           }
         }
       }
