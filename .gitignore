@@ -3,3 +3,4 @@ node_modules
 dist
 predator-border-history.db
 GEMINI.md
+live-updates.db
