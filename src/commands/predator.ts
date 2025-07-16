@@ -1,8 +1,9 @@
-import { CommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { CommandInteraction, SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } from 'discord.js';
 import { getPredatorData } from '../services/apexApiService';
 import { PredatorBorderHistoryManager } from '../services/predatorBorderHistoryManager';
 import { PredatorData } from '../types/apexApi';
 import { PredatorBorderRecord } from '../types/predatorBorderHistory';
+import { createPredatorBorderGraph } from '../services/graphService';
 
 const predatorBorderHistoryManager = new PredatorBorderHistoryManager();
 
@@ -28,20 +29,21 @@ function createPredatorEmbed(newData: PredatorData, oldRecord: PredatorBorderRec
       {
         name: 'PC <:Origin:1393573470545121280>',
         value: `RP: ${newData.PC.val} ${getDifferenceString(newData.PC.val, oldRecord?.pc)}`,
-        inline: false,
+        inline: true,
       },
       {
         name: 'PlayStation <:PlayStation:1393573335526281236>',
         value: `RP: ${newData.PS4.val} ${getDifferenceString(newData.PS4.val, oldRecord?.ps4)}`,
-        inline: false,
+        inline: true,
       },
       {
         name: 'Xbox <:Xbox:1393573305143005194>',
         value: `RP: ${newData.X1.val} ${getDifferenceString(newData.X1.val, oldRecord?.x1)}`,
-        inline: false,
+        inline: true,
       }
     )
-    .setFooter({ text: 'The difference is a comparison with the data from 24 hours ago.' });
+    .setFooter({ text: 'The difference is a comparison with the data from 24 hours ago.' })
+    .setImage('attachment://predator-border-graph.png');
 }
 
 export async function execute(interaction: CommandInteraction) {
@@ -51,9 +53,16 @@ export async function execute(interaction: CommandInteraction) {
     const newData = await getPredatorData();
     const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
     const oldRecord = predatorBorderHistoryManager.getRecordAroundTimestamp(twentyFourHoursAgo);
+    const history = predatorBorderHistoryManager.getHistory();
     const embed = createPredatorEmbed(newData, oldRecord);
 
-    await interaction.editReply({ embeds: [embed] });
+    if (history.length > 1) {
+      const graphImage = await createPredatorBorderGraph(history);
+      const attachment = new AttachmentBuilder(graphImage, { name: 'predator-border-graph.png' });
+      await interaction.editReply({ embeds: [embed], files: [attachment] });
+    } else {
+      await interaction.editReply({ embeds: [embed] });
+    }
 
   } catch (error) {
     console.error(error);

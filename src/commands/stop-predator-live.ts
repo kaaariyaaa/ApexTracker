@@ -20,10 +20,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ ephemeral: true });
 
   const messageIdToStop = interaction.options.getString('message_id');
+  const allUpdates = liveUpdateManager.getAllLiveUpdates();
 
   if (messageIdToStop) {
     // Stop a specific message
-    const liveUpdate = liveUpdateManager.getLiveUpdate(messageIdToStop);
+    const liveUpdate = allUpdates.find(u => u.messageId === messageIdToStop);
     if (liveUpdate && liveUpdate.channelId === interaction.channelId) {
       liveUpdateManager.removeLiveUpdate(messageIdToStop);
       await interaction.editReply({ content: `Live update for message ID ${messageIdToStop} has been stopped.` });
@@ -32,14 +33,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
   } else {
     // Stop all messages in the current channel
-    const liveUpdates = liveUpdateManager.getLiveUpdatesByChannel(interaction.channelId);
+    const channelUpdates = allUpdates.filter(u => u.channelId === interaction.channelId);
 
-    if (liveUpdates.length === 0) {
+    if (channelUpdates.length === 0) {
       await interaction.editReply({ content: 'No live Predator border updates are running in this channel.' });
       return;
     }
 
-    for (const update of liveUpdates) {
+    for (const update of channelUpdates) {
       liveUpdateManager.removeLiveUpdate(update.messageId);
     }
 

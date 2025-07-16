@@ -1,5 +1,9 @@
 import Database from 'better-sqlite3';
 import * as path from 'path';
+import { Client, TextChannel, EmbedBuilder, AttachmentBuilder } from 'discord.js';
+import { PredatorBorderHistoryManager } from './predatorBorderHistoryManager';
+import { createPredatorEmbed } from '../utils/embedUtils';
+import { createPredatorBorderGraph } from './graphService';
 
 export interface LiveUpdate {
   messageId: string;
@@ -11,10 +15,13 @@ export class LiveUpdateManager {
   private db: Database.Database;
   private static instance: LiveUpdateManager;
   private static readonly DB_FILE_PATH = path.join(__dirname, '../../live-updates.db');
+  private client: Client | null = null;
+  private predatorBorderHistoryManager: PredatorBorderHistoryManager;
 
   private constructor() {
     this.db = new Database(LiveUpdateManager.DB_FILE_PATH);
     this.initDatabase();
+    this.predatorBorderHistoryManager = PredatorBorderHistoryManager.getInstance();
   }
 
   public static getInstance(): LiveUpdateManager {
@@ -22,6 +29,10 @@ export class LiveUpdateManager {
       LiveUpdateManager.instance = new LiveUpdateManager();
     }
     return LiveUpdateManager.instance;
+  }
+
+  public setClient(client: Client): void {
+    this.client = client;
   }
 
   private initDatabase(): void {
@@ -44,24 +55,45 @@ export class LiveUpdateManager {
     stmt.run(messageId);
   }
 
-  public getLiveUpdatesByGuild(guildId: string): LiveUpdate[] {
-    const updates = this.db.prepare('SELECT message_id AS messageId, channel_id AS channelId, guild_id AS guildId FROM live_updates WHERE guild_id = ?').all(guildId) as LiveUpdate[];
-    return updates;
-  }
-
-  public getLiveUpdate(messageId: string): LiveUpdate | null {
-    const update = this.db.prepare('SELECT message_id AS messageId, channel_id AS channelId, guild_id AS guildId FROM live_updates WHERE message_id = ?').get(messageId) as LiveUpdate | undefined;
-    return update || null;
-  }
-
-  public getLiveUpdatesByChannel(channelId: string): LiveUpdate[] {
-    const updates = this.db.prepare('SELECT message_id AS messageId, channel_id AS channelId, guild_id AS guildId FROM live_updates WHERE channel_id = ?').all(channelId) as LiveUpdate[];
-    return updates;
-  }
-
   public getAllLiveUpdates(): LiveUpdate[] {
     const updates = this.db.prepare('SELECT message_id AS messageId, channel_id AS channelId, guild_id AS guildId FROM live_updates').all() as LiveUpdate[];
     return updates;
+  }
+
+  public async updateMessages(): Promise<void> {
+    if (!this.client) return;
+
+    const updates = this.getAllLiveUpdates();
+    const latestRecord = this.predatorBorderHistoryManager.getLatestRecord();
+    const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
+    const oldRecord = this.predatorBorderHistoryManager.getRecordAroundTimestamp(twentyFourHoursAgo);
+    const history = this.predatorBorderHistoryManager.getHistory();
+
+    const embed = createPredatorEmbed(latestRecord, oldRecord);
+    let files: AttachmentBuilder[] = [];
+
+    if (history.length > 1) {
+        const graphImage = await createPredatorBorderGraph(history);
+        const attachment = new AttachmentBuilder(graphImage, { name: 'predator-border-graph.png' });
+        files.push(attachment);
+    }
+
+    for (const update of updates) {
+      try {
+        const channel = await this.client.channels.fetch(update.channelId) as TextChannel;
+        if (channel) {
+          const message = await channel.messages.fetch(update.messageId);
+          if (message) {
+            await message.edit({ embeds: [embed], files: files });
+          }
+        }
+      } catch (error: any) { // Changed type to any to access error.code
+        console.error(`Failed to update message ${update.messageId}:`, error);
+        if (error.code === 10008) { // Unknown Message
+          this.removeLiveUpdate(update.messageId);
+        }
+      }
+    }
   }
 
   public close(): void {

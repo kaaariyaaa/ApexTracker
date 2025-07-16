@@ -1,10 +1,9 @@
-import { Client, Collection, Events, GatewayIntentBits, Interaction, TextChannel } from 'discord.js';
+import { Client, Collection, Events, GatewayIntentBits, Interaction } from 'discord.js';
 import dotenv from 'dotenv';
 import { loadCommands, Command } from './utils/commandLoader';
 import { PredatorBorderHistoryManager } from './services/predatorBorderHistoryManager';
 import { LiveUpdateManager } from './services/liveUpdateManager';
 import { getPredatorData } from './services/apexApiService';
-import { createPredatorEmbed } from './commands/predator-live';
 
 dotenv.config();
 
@@ -22,44 +21,14 @@ async function startPredatorBorderLogger() {
   setTimeout(startPredatorBorderLogger, 60000);
 }
 
-async function startLiveUpdateLoop(client: Client) {
+async function startLiveUpdateLoop() {
   try {
-    const allLiveUpdates = liveUpdateManager.getAllLiveUpdates();
-    if (allLiveUpdates.length === 0) {
-      // No active live updates to process.
-    } else {
-      const latestRecord = predatorBorderHistoryManager.getLatestRecord();
-      const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
-      const oldRecord = predatorBorderHistoryManager.getRecordAroundTimestamp(twentyFourHoursAgo);
-      const embed = createPredatorEmbed(latestRecord, oldRecord);
-
-      for (const update of allLiveUpdates) {
-        if (!update.channelId || !update.messageId) {
-          liveUpdateManager.removeLiveUpdate(update.messageId);
-          continue;
-        }
-        try {
-          const channel = await client.channels.fetch(update.channelId);
-          if (channel && channel.isTextBased()) {
-            const message = await (channel as TextChannel).messages.fetch(update.messageId);
-            await message.edit({ embeds: [embed] });
-          } else {
-            liveUpdateManager.removeLiveUpdate(update.messageId);
-          }
-        } catch (error) {
-          console.error(`Failed to update message ${update.messageId} in channel ${update.channelId}:`, error);
-          // If message or channel is not found, remove it from live updates
-          if (error instanceof Error && (error.message.includes('Unknown Message') || error.message.includes('Unknown Channel'))) {
-            liveUpdateManager.removeLiveUpdate(update.messageId);
-          }
-        }
-      }
-    }
+    await liveUpdateManager.updateMessages();
   } catch (error) {
     console.error('Error in live update loop:', error);
   }
   // Run every minute
-  setTimeout(() => startLiveUpdateLoop(client), 60000);
+  setTimeout(startLiveUpdateLoop, 60000);
 }
 
 class CustomClient extends Client {
@@ -76,8 +45,9 @@ client.commands = loadCommands();
 
 client.once(Events.ClientReady, c => {
   console.log(`Ready! Logged in as ${c.user.tag}`);
+  liveUpdateManager.setClient(client);
   startPredatorBorderLogger();
-  startLiveUpdateLoop(client);
+  startLiveUpdateLoop();
 });
 
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
